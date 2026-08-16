@@ -1,0 +1,3 @@
+# Model weights land here via scripts/fetch_model.py. The .onnx files themselves
+# are gitignored -- they are large binaries with a documented download + SHA256
+# verification path instead.
