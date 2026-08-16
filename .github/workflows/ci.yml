@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.preset }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # release  -- warnings-as-errors, real inference
+        # asan     -- AddressSanitizer + UBSan, real inference
+        # tsan     -- ThreadSanitizer; inference stubbed so the sanitizer sees
+        #             only Loom's own concurrency (see tsan_suppressions.txt)
+        preset: [release, asan, tsan]
+
+    services:
+      # Used by the integration tests from M2 onward. Harmless before then.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      LOOM_REDIS_URL: tcp://127.0.0.1:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            clang-18 lld-18 ninja-build cmake pkg-config \
+            libhiredis-dev libssl-dev zlib1g-dev
+
+      # ONNX Runtime is a ~200MB prebuilt tarball pinned by SHA256. Cache it on
+      # the fetch script's hash so a version bump busts the cache automatically.
+      - name: Cache ONNX Runtime
+        if: matrix.preset != 'tsan'
+        uses: actions/cache@v4
+        with:
+          path: third_party
+          key: ort-${{ runner.os }}-${{ hashFiles('scripts/fetch_onnxruntime.sh') }}
+
+      - name: Fetch ONNX Runtime
+        # The tsan preset sets LOOM_FAKE_INFERENCE=ON and never links ORT.
+        if: matrix.preset != 'tsan'
+        run: ./scripts/fetch_onnxruntime.sh
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}
+
+      - name: Link self-test
+        # Sanitizer suppressions are compiled into the binary via
+        # __lsan_default_suppressions, so no LSAN_OPTIONS is needed here.
+        run: ./build/${{ matrix.preset }}/src/loom-gateway --selftest
