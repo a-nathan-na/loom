@@ -1,0 +1,33 @@
+# ThreadSanitizer suppressions for Loom.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# The supported way to run TSan against Loom is the `tsan` CMake preset, which
+# sets LOOM_FAKE_INFERENCE=ON. That stubs inference out entirely, so ONNX
+# Runtime is never linked and TSan sees only Loom's own concurrency: the
+# batcher, the worker pool, the autoscaler, and the metrics registry. Those are
+# the things we actually wrote and the things a race would be our fault in.
+#
+# This file is for the other case: deliberately running TSan against a build
+# that links real ONNX Runtime. The prebuilt ORT shared object is NOT compiled
+# with -fsanitize=thread. TSan cannot see ORT's internal synchronisation, so it
+# reports races inside ORT's own thread pool that are neither real nor fixable
+# from here. Rebuilding ORT from source under TSan would cost hours of build
+# time for no additional signal about Loom's correctness.
+#
+# USAGE
+#   TSAN_OPTIONS=suppressions=$(pwd)/tsan_suppressions.txt ./loom-worker ...
+#
+# Keep this list minimal and scoped. A suppression that is broader than
+# necessary can hide a genuine race in our own code, which defeats the point of
+# running the sanitizer at all.
+
+# ONNX Runtime's intra-op/inter-op thread pools and arena allocator.
+called_from_lib:libonnxruntime.so
+race:onnxruntime::
+race:Ort::
+
+# ORT builds on top of Eigen's threadpool, which uses benign racy reads on
+# queue state that TSan cannot prove safe without instrumentation.
+race:Eigen::ThreadPoolTempl
+race:Eigen::internal::

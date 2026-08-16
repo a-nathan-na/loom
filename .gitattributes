@@ -1,0 +1,18 @@
+# Loom builds and runs on Linux (WSL2, Docker, CI). Git on Windows defaults to
+# checking files out with CRLF, which breaks shell scripts the moment they run
+# under bash -- the interpreter line becomes "#!/usr/bin/env bash\r" and the
+# shell reports "bad interpreter". Normalise everything to LF in the working
+# copy so a Windows checkout behaves identically to a Linux one.
+* text=auto eol=lf
+
+# Explicit for the files where a CRLF would actually break execution.
+*.sh    text eol=lf
+*.py    text eol=lf
+*.cmake text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# Binary artefacts: never touch these.
+*.onnx  binary
+*.png   binary
+*.tgz   binary

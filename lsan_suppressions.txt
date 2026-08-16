@@ -1,0 +1,26 @@
+# LeakSanitizer suppressions for Loom.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# Constructing an Ort::Env allocates process-global state inside ONNX Runtime
+# that ORT never frees and holds no pointer to at exit, so LeakSanitizer
+# correctly reports it as a direct leak:
+#
+#   Direct leak of 176 byte(s) in 1 object(s) allocated from:
+#     #0 calloc
+#     #1 libonnxruntime.so.1+0xb1ce41
+#
+# It is a fixed, one-time allocation per process -- not a per-request leak, and
+# not something callers can release. Suppressing it is the only option short of
+# patching ORT.
+#
+# This is scoped to the ONNX Runtime shared object by design. Any leak in Loom's
+# own code still fails the build, which is the entire point of running ASan in
+# CI. Do not broaden this.
+#
+# USAGE
+#   LSAN_OPTIONS=suppressions=$(pwd)/lsan_suppressions.txt ./loom-worker ...
+#
+# The asan CTest preset sets this automatically; see tests/CMakeLists.txt.
+
+leak:libonnxruntime.so

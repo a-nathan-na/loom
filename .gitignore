@@ -1,0 +1,35 @@
+# Build output
+build/
+out/
+*.o
+*.a
+*.so
+*.so.*
+
+# Fetched third-party binaries (see scripts/fetch_onnxruntime.sh)
+third_party/
+
+# Model weights (see scripts/fetch_model.py).
+# models/* rather than models/: git cannot re-include a file inside an excluded
+# directory, so the negation below would never take effect.
+models/*
+!models/.gitkeep
+
+# Benchmark artifacts
+bench/results/
+*.png
+!docs/img/*.png
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editors / OS
+.vscode/
+.idea/
+.cache/
+compile_commands.json
+.DS_Store
+Thumbs.db

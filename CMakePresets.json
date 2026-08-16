@@ -1,0 +1,104 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 22, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-18",
+        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "wsl-base",
+      "hidden": true,
+      "inherits": "base",
+      "description": "Build output on ext4. Measured on this machine: /mnt/c is ~116x slower for small-file writes and ~22x slower for git clone, and a C++ build with FetchContent is exactly that workload. Source stays on /mnt/c so Windows git and editors keep working.",
+      "binaryDir": "$env{HOME}/loom-build/${presetName}"
+    },
+
+    {
+      "name": "release",
+      "displayName": "Release (real inference, no sanitizer)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "LOOM_SANITIZER": "none",
+        "LOOM_WERROR": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug (real inference, no sanitizer)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LOOM_SANITIZER": "none"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "AddressSanitizer + UBSan (real inference)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "LOOM_SANITIZER": "address"
+      }
+    },
+    {
+      "name": "tsan",
+      "displayName": "ThreadSanitizer (inference stubbed -- see DESIGN_DECISIONS.md)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "LOOM_SANITIZER": "thread",
+        "LOOM_FAKE_INFERENCE": "ON"
+      }
+    },
+
+    {
+      "name": "wsl-release",
+      "displayName": "WSL: Release",
+      "inherits": ["wsl-base", "release"]
+    },
+    {
+      "name": "wsl-debug",
+      "displayName": "WSL: Debug",
+      "inherits": ["wsl-base", "debug"]
+    },
+    {
+      "name": "wsl-asan",
+      "displayName": "WSL: ASan + UBSan",
+      "inherits": ["wsl-base", "asan"]
+    },
+    {
+      "name": "wsl-tsan",
+      "displayName": "WSL: TSan (inference stubbed)",
+      "inherits": ["wsl-base", "tsan"]
+    }
+  ],
+  "buildPresets": [
+    { "name": "release", "configurePreset": "release" },
+    { "name": "debug",   "configurePreset": "debug" },
+    { "name": "asan",    "configurePreset": "asan" },
+    { "name": "tsan",    "configurePreset": "tsan" },
+
+    { "name": "wsl-release", "configurePreset": "wsl-release" },
+    { "name": "wsl-debug",   "configurePreset": "wsl-debug" },
+    { "name": "wsl-asan",    "configurePreset": "wsl-asan" },
+    { "name": "wsl-tsan",    "configurePreset": "wsl-tsan" }
+  ],
+  "testPresets": [
+    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } },
+    { "name": "asan",    "configurePreset": "asan",    "output": { "outputOnFailure": true } },
+    { "name": "tsan",    "configurePreset": "tsan",    "output": { "outputOnFailure": true } },
+
+    { "name": "wsl-release", "configurePreset": "wsl-release", "output": { "outputOnFailure": true } },
+    { "name": "wsl-asan",    "configurePreset": "wsl-asan",    "output": { "outputOnFailure": true } },
+    { "name": "wsl-tsan",    "configurePreset": "wsl-tsan",    "output": { "outputOnFailure": true } }
+  ]
+}
