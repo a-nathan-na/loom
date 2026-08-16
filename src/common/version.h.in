@@ -1,0 +1,8 @@
+#pragma once
+
+// Generated from version.h.in by CMake. Do not edit the generated copy.
+
+#define LOOM_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define LOOM_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define LOOM_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define LOOM_VERSION_STRING "@PROJECT_VERSION@"
